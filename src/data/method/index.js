@@ -9,8 +9,33 @@ const Carrier = plugin.Carrier;
 let _carrier = null;
 
 const streamCache = {};
+const randomCache = {};
 
 const F = {
+  getRandomNumber(friendId){
+    if(!randomCache[friendId]){
+      randomCache[friendId] = _.random(1, 100000) * _.random(1, 100000);
+    }
+    return randomCache[friendId];
+  },
+  sessionHandshack(dm, friendId){
+    const random = F.getRandomNumber(friendId);
+console.log('[random send] : '+random);
+    _carrier.sendMessage(friendId, config.STREAM_HANDSHACK_RANDOM+':'+random);
+    
+  },
+  sessionHandshackCallback(dm, friendId, random){
+    const local_random = F.getRandomNumber(friendId);
+    console.log('[ random ] : ', _.toNumber(random), local_random);
+    if(_.toNumber(random) > local_random){
+      _.delay(()=>{
+        dm.method.session.sessionRequest(friendId);
+      }, 500);
+      
+    }
+  },
+
+
   buildCallback(dm){
     return {
       onReady : async ()=>{
@@ -83,6 +108,12 @@ const F = {
         dm.dispatch(dm.action.friends_all_set(param));
       },
       onFriendMessage : (data)=>{
+        if(data.message.indexOf(config.STREAM_HANDSHACK_RANDOM) === 0){
+          const random = data.message.split(':')[1];
+          F.sessionHandshackCallback(dm, data.userId, random);
+          return false;
+        }
+
         const param = {
           type : 'to',
           userId : data.userId,
@@ -96,11 +127,14 @@ const F = {
       onSessionRequest : (data)=>{
         const { friendId } = data;
 
-        _.delay(()=>{
-          // if not delay, have an error happen
-          dm.method.session.sessionReplyRequest(friendId);
-          
-        }, 500);
+        const loop = ()=>{
+          _.delay(()=>{
+            // if not delay, have an error happen
+            dm.method.session.sessionReplyRequest(friendId).catch(loop)
+          }, 3000);
+        };
+
+        loop();
         
       },
       onStateChanged : (data)=>{
@@ -111,24 +145,24 @@ const F = {
         
         dm.dispatch(dm.action.friends_all_set(param));
         
-        // if(data.state === 1){
-          
-        //   dm.method.session.sessionRequest(data.friendId).catch(()=>{});
-          
-        // }
+        if(data.state === 1){
+          F.sessionHandshack(dm, data.friendId);        
+        }
       },
       onStreamData : (data)=>{
         const fid = data.friendId;
+        // console.log(555, data.text);
 
         // TODO
         if(data.text === config.STREAM_IMAGE_MESSAGE_START){
           streamCache[fid] = '';
         }
-        else if(data.text === config.STREAM_IMAGE_MESSAGE_END){
-          const all = streamCache[fid];
+        else if(config.STREAM_IMAGE_MESSAGE_END_REG.test(data.text)){
+          const all = streamCache[fid]+data.text.replace(config.STREAM_IMAGE_MESSAGE_END, '');
+          console.log(333, all.length);
           const param = {
             type : 'to',
-            userId : data.friendId,
+            userId : fid,
             time : Date.now(),
             contentType : 'image',
             content : all
@@ -154,7 +188,7 @@ export default (dm)=>{
       // }catch(e){
       //   console.log(111, e);
       // }
-      // TODO : when use CMD+R to refresh page in debug mode. how to restart carrier node?
+      
 
       _carrier = new Carrier('carrier_demo', F.buildCallback(dm));
       await _carrier.start();

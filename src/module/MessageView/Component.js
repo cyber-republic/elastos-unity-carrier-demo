@@ -169,7 +169,7 @@ export default class extends StackPage{
     }
     else if(d.contentType === 'image'){
       return (
-        <Image style={{maxWidth:300,height:100}} source={{uri: d.content}} />
+        <Image style={{width:'100%', height:120}} source={{uri: d.content}} />
       );
     }
     else{
@@ -217,11 +217,11 @@ export default class extends StackPage{
     );
   }
 
-  sendImage(){
+  async sendImage(){
     const {info} = this.props;
-    this.props.showSelectImageBox((flag, data64)=>{
+    this.props.showSelectImageBox(async (flag, data64)=>{
       if(flag){
-        this.props.sendStream(info.userId, 'image', data64);
+        await this.props.sendStream(info.userId, 'image', data64);
       }
       
     });
@@ -229,7 +229,7 @@ export default class extends StackPage{
 
   ord_defineHeaderTitle(){
     const name = this.props.info.name || 'NA';
-    return name;
+    return name + ' ['+this.props.info.state+']';
   }
 
   componentDidMount(){

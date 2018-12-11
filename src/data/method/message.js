@@ -46,13 +46,16 @@ export default (dm)=>{
       dm.dispatch(dm.action.message_add(param));
 
       // start to send stream
-      const arr = F.splitStringByChunk(streamContent, 2000);
-      const list = _.concat(config.STREAM_IMAGE_MESSAGE_START, arr, config.STREAM_IMAGE_MESSAGE_END);
+      const arr = F.splitStringByChunk(streamContent, 1024);
+      // const list = _.concat(config.STREAM_IMAGE_MESSAGE_START, arr, config.STREAM_IMAGE_MESSAGE_END);
 
-      for(let i=0, len=list.length; i<len; i++){
+      await dm.method.session.writeStream(userId, config.STREAM_IMAGE_MESSAGE_START);
+      for(let i=0, len=arr.length; i<len; i++){
      
-        await dm.method.session.writeStream(userId, list[i]);
+        await dm.method.session.writeStream(userId, arr[i]);
       }
+
+      await dm.method.session.writeStream(userId, config.STREAM_IMAGE_MESSAGE_END);
 
     },
 
