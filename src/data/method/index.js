@@ -3,9 +3,13 @@ import me from './me';
 import friends from './friends';
 import messgae from './message';
 import session from './session';
+import config from 'app/config';
 
 const Carrier = plugin.Carrier;
 let _carrier = null;
+
+const streamCache = {};
+
 const F = {
   buildCallback(dm){
     return {
@@ -89,30 +93,54 @@ const F = {
 
         dm.dispatch(dm.action.message_add(param));
       },
-      onSessionRequest : ()=>{
+      onSessionRequest : (data)=>{
+        const { friendId } = data;
 
+        _.delay(()=>{
+          // if not delay, have an error happen
+          dm.method.session.sessionReplyRequest(friendId);
+          
+        }, 500);
+        
       },
       onStateChanged : (data)=>{
         const param = {};
         param[data.friendId] = {
           state : data.state
         };
-        console.log(111, data);
+        
         dm.dispatch(dm.action.friends_all_set(param));
         
-        if(data.state === 1){
-          dm.method.session.sessionRequest(data.friendId);
-        }
+        // if(data.state === 1){
+          
+        //   dm.method.session.sessionRequest(data.friendId).catch(()=>{});
+          
+        // }
       },
       onStreamData : (data)=>{
-        const param = {
-          type : 'to',
-          userId : data.friendId,
-          time : Date.now(),
-          contentType : 'stream',
-          content : data.text
-        };
-        dm.dispatch(dm.action.message_add(param));
+        const fid = data.friendId;
+
+        // TODO
+        if(data.text === config.STREAM_IMAGE_MESSAGE_START){
+          streamCache[fid] = '';
+        }
+        else if(data.text === config.STREAM_IMAGE_MESSAGE_END){
+          const all = streamCache[fid];
+          const param = {
+            type : 'to',
+            userId : data.friendId,
+            time : Date.now(),
+            contentType : 'image',
+            content : all
+          };
+          dm.dispatch(dm.action.message_add(param));
+
+          streamCache[fid] = null;
+        }
+        else{
+          streamCache[fid] += data.text;
+        }
+        
       }
     };
   }

@@ -1,8 +1,11 @@
 import React from 'react';
 import StackPage from 'app/module/common/StackPage';
 import {_, Style, Cache} from 'CR';
+import {Image} from 'react-native';
 import KeyboardSpacer from 'react-native-keyboard-spacer';
-import { Container, View, Content, Button, Text, Form, Item, Label, Input, Row, Col, Icon, Toast} from 'native-base';
+import { Container, View, Content, Button, Text, 
+  Form, Item, Label, Input, Row, Col, Icon, Toast, Thumbnail
+} from 'native-base';
 
 const sy = Style.create({
   box : {
@@ -19,6 +22,8 @@ const sy = Style.create({
     // width: '100%',
     height: 50,
     // position : 'absolute',
+    // flex: 1,
+    flexDirection: 'row',
     bottom: 0,
     left: 0,
     right: 0,
@@ -35,6 +40,10 @@ const sy = Style.create({
     borderWidth: 1,
     color: '#333',
     paddingLeft: 5
+  },
+  send_option: {
+    width: 50,
+    height: 50
   },
 
   col_l: {
@@ -133,7 +142,7 @@ export default class extends StackPage{
         <Row key={i} style={sy.row}>
           <Col style={sy.col_l}><Icon name="user-circle" type="FontAwesome" /></Col>
           <Col style={sy.col_b}>
-            <View style={sy.vt}><Text style={sy.bt}>{d.content}</Text></View>
+            <View style={sy.vt}>{this.renderMessageContent(d)}</View>
           </Col>
           <Col style={sy.col_r}></Col>
         </Row>
@@ -144,11 +153,27 @@ export default class extends StackPage{
         <Row key={i} style={sy.row}>
           <Col style={sy.col_l}></Col>
           <Col style={sy.col_b}>
-            <View style={[sy.vt, sy.vt1]}><Text style={sy.bt1}>{d.content}</Text></View>
+            <View style={[sy.vt, sy.vt1]}>{this.renderMessageContent(d)}</View>
           </Col>
           <Col style={sy.col_r}><Icon name="user-circle" type="FontAwesome" /></Col>
         </Row>
       );
+    }
+  }
+
+  renderMessageContent(d){
+    if(d.contentType === 'text'){
+      return (
+        <Text style={sy.bt}>{d.content}</Text>
+      );
+    }
+    else if(d.contentType === 'image'){
+      return (
+        <Image style={{maxWidth:300,height:100}} source={{uri: d.content}} />
+      );
+    }
+    else{
+      return 'invalid stream type : '+d.contentType;
     }
   }
 
@@ -185,10 +210,22 @@ export default class extends StackPage{
     return (
       <View style={sy.send_ared}>
         <Input {...p} style={sy.send_input} />
+        <Button style={sy.send_option} icon rounded onPress={this.sendImage.bind(this)}>
+          <Icon name="ios-add" />
+        </Button>
       </View>
     );
   }
 
+  sendImage(){
+    const {info} = this.props;
+    this.props.showSelectImageBox((flag, data64)=>{
+      if(flag){
+        this.props.sendStream(info.userId, 'image', data64);
+      }
+      
+    });
+  }
 
   ord_defineHeaderTitle(){
     const name = this.props.info.name || 'NA';

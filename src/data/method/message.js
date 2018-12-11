@@ -1,7 +1,16 @@
 import {_, plugin} from 'CR';
-
+import config from 'app/config';
 
 const {Carrier} = plugin;
+
+const F = {
+  splitStringByChunk(data, size){
+    const d = data.split('');
+    const arr = _.chunk(d, size);
+    return _.map(arr, x=>x.join(''));
+  }
+};
+
 export default (dm)=>{
   return {
     async sendTextMessage(userId, message){
@@ -23,18 +32,28 @@ export default (dm)=>{
 
       dm.dispatch(dm.action.message_add(param));
     },
-    async sendStreamMessage(userId, streamContent){
-      await dm.method.session.writeStream(userId, streamContent);
 
+    // type could be "image"
+    async sendStreamMessage(userId, type, streamContent){
       const param = {
         type : 'from',
         userId,
         time : Date.now(),
         content : streamContent,
-        contentType : 'stream'
+        contentType : type || 'stream'
       };
 
       dm.dispatch(dm.action.message_add(param));
+
+      // start to send stream
+      const arr = F.splitStringByChunk(streamContent, 2000);
+      const list = _.concat(config.STREAM_IMAGE_MESSAGE_START, arr, config.STREAM_IMAGE_MESSAGE_END);
+
+      for(let i=0, len=list.length; i<len; i++){
+     
+        await dm.method.session.writeStream(userId, list[i]);
+      }
+
     },
 
 

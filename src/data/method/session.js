@@ -30,6 +30,12 @@ export default (dm)=>{
       await carrier.sessionRequest(friendId);
     },
 
+    async sessionReplyRequest(friendId){
+      const carrier = dm.method.getCarrier();
+
+      await carrier.sessionReplyRequest(friendId, 0, '');
+    },
+
     async writeStream(friendId, data){
       const carrier = dm.method.getCarrier();
       await carrier.writeStream(friendId, data);
