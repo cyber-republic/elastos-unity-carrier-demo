@@ -1,3 +1,4 @@
+import {Platform} from 'react-native';
 import {plugin, _} from 'CR';
 import me from './me';
 import friends from './friends';
@@ -10,18 +11,30 @@ let _carrier = null;
 
 const streamCache = {};
 const randomCache = {};
+const friendCache = {};
 
 const F = {
   getRandomNumber(friendId){
     if(!randomCache[friendId]){
-      randomCache[friendId] = _.random(1, 100000) * _.random(1, 100000);
+      if(Platform.OS === 'ios'){
+        // TODO
+        randomCache[friendId] = 1;
+      }
+      else{
+        randomCache[friendId] = _.random(1, 100000) * _.random(1, 100000);
+      }
+      
     }
     return randomCache[friendId];
   },
   sessionHandshack(dm, friendId){
     const random = F.getRandomNumber(friendId);
 console.log('[random send] : '+random);
-    _carrier.sendMessage(friendId, config.STREAM_HANDSHACK_RANDOM+':'+random);
+    _carrier.sendMessage(friendId, config.STREAM_HANDSHACK_RANDOM+':'+random).then(()=>{
+      // if(Platform.OS === 'ios'){
+      //   dm.method.session.sessionRequest(friendId).catch(()=>{});
+      // }
+    });
     
   },
   sessionHandshackCallback(dm, friendId, random){
@@ -29,7 +42,7 @@ console.log('[random send] : '+random);
     console.log('[ random ] : ', _.toNumber(random), local_random);
     if(_.toNumber(random) > local_random){
       _.delay(()=>{
-        dm.method.session.sessionRequest(friendId);
+        dm.method.session.sessionRequest(friendId).catch(()=>{});
       }, 500);
       
     }
@@ -90,7 +103,15 @@ console.log('[random send] : '+random);
         dm.dispatch(dm.action.friends_all_set(param));
 
         if(!dm.method.session.isConnect(data.friendId)){
-          dm.method.session.createSession(data.friendId);
+          const cache = friendCache[data.friendId] || {};
+          friendCache[data.friendId] = cache;
+          
+          dm.method.session.createSession(data.friendId).then(()=>{
+            cache.ready = true;
+            if(cache.replyCB){
+              cache.replyCB();
+            }
+          });
         }
       },
       onFriendPresence : (data)=>{
@@ -125,17 +146,30 @@ console.log('[random send] : '+random);
         dm.dispatch(dm.action.message_add(param));
       },
       onSessionRequest : (data)=>{
+        console.log(444, data);
         const { friendId } = data;
 
-        const loop = ()=>{
+        const cache = friendCache[data.friendId] || {};
+        friendCache[data.friendId] = cache;
+        
+        let loop = ()=>{
           _.delay(()=>{
+            
             // if not delay, have an error happen
-            dm.method.session.sessionReplyRequest(friendId).catch(loop)
-          }, 3000);
+            console.log(11111111)
+            dm.method.session.sessionReplyRequest(friendId).catch(()=>{});
+            loop = ()=>{};
+          }, 500);
         };
 
-        loop();
-        
+        if(cache.ready){
+          console.log(2222222)
+          loop();
+        }
+        else{
+          console.log(3333333)
+          cache.replyCB = loop;
+        }
       },
       onStateChanged : (data)=>{
         const param = {};

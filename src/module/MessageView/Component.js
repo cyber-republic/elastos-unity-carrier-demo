@@ -42,8 +42,11 @@ const sy = Style.create({
     paddingLeft: 5
   },
   send_option: {
-    width: 50,
-    height: 50
+    width: 40,
+    height: 40,
+    left: 10,
+    top : 5
+
   },
 
   col_l: {
@@ -210,7 +213,7 @@ export default class extends StackPage{
     return (
       <View style={sy.send_ared}>
         <Input {...p} style={sy.send_input} />
-        <Button style={sy.send_option} icon rounded onPress={this.sendImage.bind(this)}>
+        <Button success style={sy.send_option} icon rounded onPress={this.sendImage.bind(this)}>
           <Icon name="ios-add" />
         </Button>
       </View>
